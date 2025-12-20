@@ -1,6 +1,6 @@
 import copy 
 from datetime import datetime
-current_time = datetime.now()
+
 
 class Book:
 
@@ -84,8 +84,8 @@ class Member:
             if booking[0] == book:
                 self.books.remove(booking)
                 break
-            else:
-                raise KeyError ("Booking not found.")
+        else:
+            raise KeyError ("Booking not found.")
 
 class Inventory:
 
@@ -108,7 +108,6 @@ class Inventory:
             if str(i) in self.booklist.keys():
                 duplicates.append(i)
                 continue
-                #raise KeyError (f"Serial number {i} already in database. Operation cancelled.")
             else:
                 book = copy.deepcopy(newbook)
                 i = str(i)
@@ -119,16 +118,13 @@ class Inventory:
 
                 #Formats the attributes of each Book as a delimited string. 
                 #Writes to inventory file. 
-                data = "\n" + book.tittle+"," + str(book.year) + ","+book.author + ","+ book.bookStatus + ","+ i
+                data = book.tittle+"," + str(book.year) + ","+book.author + ","+ book.bookStatus() + ","+ i + "\n" 
                 with open (self.filepath, "a") as file:
                     file.write(data)
         print(f"Operation completed. {len(duplicates)} duplicates found and skipped.") 
     
     #imports books from a .csv file
     def importBook(self, file):
-
-        #holder for duplicate serial numbers
-        duplicates = []
 
         #splits each line in the import file based on a delimiter and stores each element in a variable
         with open(file, "r") as i:
@@ -140,11 +136,18 @@ class Inventory:
             year = book_elements[1].strip()
             author = book_elements[2].strip()
             status = book_elements[3].strip()
-            serial = book_elements[4:].strip()
+            serial_raw = book_elements[4:]
+
+            #Removes whitespace from serial numbers
+            serial = [s.strip() for s in serial_raw]
 
             #Checks list of serials extracted from the import fike  for entries already present in the system.
             #If duplicate is found, serial number is removed from the import file variable. 
+            total_duplicates = []
+            duplicates = [s for s in serial if s in self.booklist.keys()]
             serial = [s for s in serial if s not in self.booklist.keys()]
+            total_duplicates.extend(duplicates)
+
                     
             #Creates a Book object, adds it to the database. 
             newbook= Book(tittle, year, author)
@@ -155,7 +158,8 @@ class Inventory:
             for i in serial:
                 if i in self.booklist.keys():
                     self.booklist[i].setStatus(status)          
-            print(f"Operation completed. {len(duplicates)} duplicates found and skipped.") 
+
+        print(f"Operation completed. {len(duplicates)} duplicates found and skipped.") 
                 
     #Allows for the editing of any of a book's attributes
     def editRecord(self, serial, newserial = None, newTittle= None, newyear = None, newauthor = None ):
@@ -174,9 +178,10 @@ class Inventory:
             if newauthor != None:
                 book.setAuthor(newauthor)
             if newserial != None:
-                if newserial in self.booklist and serial != newserial:
+                if newserial not in self.booklist or serial == newserial:
                     del self.booklist[serial]
                     self.booklist[newserial] = book
+                    book.setSerial(newserial)
                 else:
                     raise KeyError("Invalid entry. Please verify data and try again.")
     
@@ -186,14 +191,16 @@ class Inventory:
             raise KeyError(f"Serial number {serial} not found")
         else: 
             del self.booklist[serial]
-        """ 
-        Overrite the inventory file with the contents of the booklist
-        with open (self.filepath, "a") as file:
-            data = file.readlines()
-            for book in data:
-                if book[4] == serial:
- """
-
+            with open(self.filepath, "w") as file:
+                for book in self.booklist.values():
+                    # Write one CSV line per book: tittle, year, author, status, serial
+                    line = (
+                        str(book.bookTittle()) + "," +
+                        str(book.bookYear()) + "," +
+                        str(book.bookAuthor()) + "," +
+                        str(book.bookStatus()) + "," +
+                        str(book.bookSerial())+ "\n")
+                    file.write(line)
 
     #Deletes the records of all books of a given tittle. 
     def delRecords(self, tittle):
@@ -206,28 +213,43 @@ class Inventory:
         for serial in serials_to_delete:
             if serial in self.booklist:
                 del self.booklist[str(serial)]
+                with open(self.filepath, "w") as file:
+                    for book in self.booklist.values():
+                        # Write one CSV line per book: tittle, year, author, status, serial
+                        line = (
+                            str(book.bookTittle()) + "," +
+                            str(book.bookYear()) + "," +
+                            str(book.bookAuthor()) + "," +
+                            str(book.bookStatus()) + "," +
+                            str(book.bookSerial())+ "\n")
+                        file.write(line)
 
 
-    #Runs a search for a specific tittle returning the number of vaailable copies. 
+    #Runs a search for a specific tittle returning the number of available copies. 
     def tittleSearchQuery(self, tittle):
         queryresults=[]
         for i in self.booklist.values():
-            if i.bookTittle() == tittle and i.status == "Available":
+            if i.bookTittle() == tittle and i.bookStatus() == "Available":
                 queryresults.append(i)
-        return i.bookTittle() + ": "+ str(len(queryresults))+ " available copies."
+        return tittle + ": "+ str(len(queryresults))+ " available copies."
 
     #Returns a listing of books based on a given status. 
     def statusSearchQuery(self, status):
         queryresults=[i for i in self.booklist.values() if i.bookStatus() ==status]
-        return status + " books: " + str(queryresults)
+        if not queryresults:
+            return status + " books: 0"
+        else:
+            for book in queryresults:
+                return  ", ".join(book.bookTittle() + " ("+ book.bookSerial()+ ")" )
 
     def bookListing(self):
         listing = []
         for i in self.booklist.values():
-            listing.append= i.bookSerial(), i.bookTittle(),i.bookStatus()
+            listing.append((i.bookSerial(), i.bookTittle(),i.bookStatus()))
         return listing
         
     def checkOut(self, serial, member, duedate):
+        current_time = datetime.now()
         if serial not in self.booklist.keys():
             raise KeyError (f"Serial {serial} not found. Operation cancelled.")
         elif self.booklist[serial].bookStatus() == "Checked Out" or self.booklist[serial].bookStatus() == "Reserved":
@@ -235,20 +257,21 @@ class Inventory:
         else:
             self.booklist[serial].setStatus("Checked Out")
             member.registerBook(self.booklist[serial], duedate)
-            data =  str(current_time)+ "," + "Checkout"+ ","+ self.booklist[serial].bookTittle()+ ","+self.booklist[serial].bookSerial()+","+ member.firstName() +" "+ member.lastName()+ str(member.idNum())
+            data =  (str(current_time)+ "," + "Checkout"+ ","+ self.booklist[serial].bookTittle()+ ","+self.booklist[serial].bookSerial()+","+ member.firstName() +" "+ member.lastName()+ "," + str(member.idNum())+ "\n")
             with open (self.borrowinglogpath, "a") as file:
                     file.write(data)
             
     
     def checkIn(self, serial, member):
+        current_time = datetime.now()
         if serial not in self.booklist.keys():
             raise KeyError (f"Serial {serial} not found. Operation cancelled.")
         elif self.booklist[serial].bookStatus() == "Available":
             raise KeyError (f"Book is unassigned. Please review submission.")
         else:
-            self.booklist[serial].setStatus("Available")
             member.returnBook(self.booklist[serial])
-            data =  str(current_time)+ "," + "Checkin"+ ","+ self.booklist[serial].bookTittle()+ ","+self.booklist[serial].bookSerial()+","+ member.firstName() +" "+ member.lastName()+ str(member.idNum())
+            self.booklist[serial].setStatus("Available")
+            data = (str(current_time)+ "," + "Checkin"+ ","+ self.booklist[serial].bookTittle()+ ","+self.booklist[serial].bookSerial()+","+ member.firstName() +" "+ member.lastName()+ ","+  str(member.idNum())+ "\n")
             with open (self.borrowinglogpath, "a") as file:
                 file.write(data)
            
