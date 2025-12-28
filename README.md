@@ -11,10 +11,16 @@ A simple, local library management system built with **Tkinter** for the GUI and
 - Simple reports viewer for the borrowing log.
 
 ## Installation
-git clone https://github.com/<your-org>/<your-repo>.git
+- git clone https://github.com/<your-org>/<your-repo>.git
 cd <your-repo>
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
+- libraryapp.py and lms_backend.py files must be in the same folder. 
+
+
+
 ## Running the App
-python libraryapp.py
+- run the python libraryapp.py
+
+- running the file will automatically generate the borrowinglog.csv and inventory.csv files. 
