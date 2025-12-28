@@ -258,7 +258,7 @@ class Inventory:
         if self.booklist[serial].bookStatus() == "Available":
             raise KeyError("Book is unassigned. Please review submission.")
 
-        # Remove from member and mark available
+        # Remove from member and mark available 
         member.returnBook(self.booklist[serial])
         self.booklist[serial].setStatus("Available")
 
