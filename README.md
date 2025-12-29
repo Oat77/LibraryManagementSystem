@@ -10,6 +10,12 @@ A simple, local library management system built with **Tkinter** for the GUI and
 - Check-out and check-in workflow with borrowing log.
 - Simple reports viewer for the borrowing log.
 
+## Repository Contents
+- lms_backend.py : backend python code.
+- lms_backend.py : python code that handles frontend GUI.
+- import.csv : import file containing sample data outlining format required for import jobs.
+- library.png : main menu background photo. 
+
 ## Installation
 - git clone https://github.com/<your-org>/<your-repo>.git
 cd <your-repo>
